@@ -1319,7 +1319,7 @@ group_t group_merge(group_t* g1, group_t* g2)
     return g;
 }
 
-void group_list_merge(group_list_t* groups, matrix_t* matrix, double (*compute_strength)(group_list_t*, matrix_t*, int, int))
+void group_list_merge(group_list_t* groups, double (*compute_strength)(group_list_t*, int, int, void*), void* user_data)
 {
     int i;
     int j;
@@ -1336,22 +1336,19 @@ void group_list_merge(group_list_t* groups, matrix_t* matrix, double (*compute_s
         max = 0.0;
         for(i = 0; i < groups->n_groups; i++)
         {
-            for(j = i; j < groups->n_groups; j++)
+            for(j = i + 1; j < groups->n_groups; j++)
             {
                 if(i != j)
                 {
-                    cur = compute_strength(groups, matrix, i, j);
+                    cur = compute_strength(groups, i, j, user_data);
                     if(cur > max)
                     {
                         c1 = i;
                         c2 = j;
                         max = cur;
-                        break;
                     }
                 }
             }
-            if(c1 != -1 && c2 != -1)
-                break;
         }
         
         if(c1 != -1 && c2 != -1)

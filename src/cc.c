@@ -93,8 +93,9 @@ void matrix_print_int(matrix_t* matrix)
     }
 }
 
-double boolean_strength(group_list_t* groups, matrix_t* matrix, int g1, int g2)
+double boolean_strength(group_list_t* groups, int g1, int g2, void* user_data)
 {
+    matrix_t* matrix = (matrix_t*)user_data;
     int i;
     int j;
     int* w;
@@ -103,7 +104,6 @@ double boolean_strength(group_list_t* groups, matrix_t* matrix, int g1, int g2)
         for(j = 0; j < groups->groups[g2].n_trajectories; j++)
         {
             w = matrix->matrix + (matrix->weight_size * ((matrix->n_trajectories * groups->groups[g2].trajectories[j]) + groups->groups[g1].trajectories[i]));
-            /* printf("[%d, %d] = %d\n", groups->groups[g1].trajectories[i], groups->groups[g2].trajectories[j], *w); */
             if(*w == TRUE)
                 return 1.0;
         }
@@ -129,7 +129,7 @@ int main(int argc, char** argv)
     groups = group_list_from_clique_list(cl);
     /* group_list_print(groups); */
     printf("Merging groups...\n");
-    group_list_merge(groups, matrix, boolean_strength);
+    group_list_merge(groups, boolean_strength, matrix);
     group_list_save(groups, config.grpfile);
     group_list_destroy(groups);
     matrix_destroy(matrix);
