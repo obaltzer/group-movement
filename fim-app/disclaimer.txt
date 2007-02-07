@@ -1,0 +1,2 @@
+1. The use of the AFOPT package(including source codes and executables) is restricted to non-commercial educational or research purposes.
+2. The authors and their institutions are not responsible for any damage caused by the AFOPT package.
