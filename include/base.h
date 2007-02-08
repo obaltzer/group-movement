@@ -185,5 +185,6 @@ void group_list_merge(group_list_t* groups, double (*compute_strength)(group_lis
 void group_list_print(group_list_t* groups);
 void group_list_save(group_list_t* groups, char* filename);
 group_list_t* group_list_load(char* filename);
+int int_cmp(const void* i1, const void* i2);
 
 #endif
