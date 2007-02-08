@@ -161,7 +161,8 @@ void usage()
         " -w, --width n\t\twidth n of the output image in pixels (default 400)\n"\
         " -h, --height n\t\theight n of the output image in pixels (default 400)\n"\
         " -l, --highlight\tif set known individual groups will be highlighted\n"\
-        " -o, --output FILE\tfilename of the output PNG file (default: output.png)\n");
+        " -o, --output FILE\tfilename of the output PNG file (default: output.png)\n"\
+        " -g, --groups FILE\tfilename of the groups definition file (default: none)\n");
     exit(-1);
 }
 
@@ -202,7 +203,7 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
     scale_x = (double)config->width / (double)dataset->grid_size;
     scale_y = (double)config->height / (double)dataset->grid_size;
 
-    cairo_set_line_width(cr, 1.0);
+    cairo_set_line_width(cr, 0.5);
     n_groups = dataset->n_groups;
     gl = dataset->groups;
     if(groups && (groups->n_groups > 0))
