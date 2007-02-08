@@ -130,6 +130,8 @@ else
           h[id.to_i] = []
         end
         h[id.to_i] << [x.to_i, y.to_i, t.to_i]
+      else
+        h.delete id.to_i
       end
     end
   end
@@ -204,8 +206,13 @@ else
     end
     tags << Tag.new(k, {}, path)
   end
-  GCConfig.grid_size = 1 << (log2(max(x_max, y_max)) + 1)
-  GCConfig.max_t = 1 << (log2(max_t - min_t) + 1)
+#  GCConfig.grid_size = 1 << (log2(max(x_max, y_max)) + 1)
+#  GCConfig.grid_size = 1 << (log2(max(x_max, y_max)) )
+  GCConfig.grid_size = max(x_max, y_max)
+#  GCConfig.max_t = 1 << (log2(max_t - min_t) + 1)
+#  GCConfig.max_t = 1 << log2(max_t - min_t)
+  GCConfig.max_t = max_t - min_t
+
   puts "MinT: #{min_t} MaxT: #{max_t}"
   puts "MinX: #{x_min} MaxX: #{x_max}"
   puts "MinY: #{y_min} MaxY: #{y_max}"
