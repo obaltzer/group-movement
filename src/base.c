@@ -327,12 +327,15 @@ void trajectory_print(trajectory_t* trajectory)
 {
     int i = 0;
     printf("%d: ", trajectory->trajectory_id);
-    for(; i < trajectory->n_samples - 1; i++)
+    if(trajectory->n_samples > 0)
     {
+        for(; i < trajectory->n_samples - 1; i++)
+        {
+            sample_print(&trajectory->samples[i]);
+            printf(", ");
+        }
         sample_print(&trajectory->samples[i]);
-        printf(", ");
     }
-    sample_print(&trajectory->samples[i]);
     printf("\n");
 }
 
