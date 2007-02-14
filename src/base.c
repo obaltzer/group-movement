@@ -1295,7 +1295,7 @@ group_t group_merge(group_t* g1, group_t* g2)
     list_t* l;
     group_t g;
   
-    g.group_id = 0;
+    g.group_id = g1->group_id;
     g.n_trajectories = 0;
     g.trajectories = NULL;
     t = malloc(sizeof(int) * (g1->n_trajectories + g2->n_trajectories));
@@ -1331,6 +1331,22 @@ void group_list_merge(group_list_t* groups, double (*compute_strength)(group_lis
     double max = 0.0;
     double cur;
     group_t* new_list;
+    double* sm;
+    int n_base_groups;
+
+    /* pre-compute pairwise strength matrix */
+    n_base_groups = groups->n_groups;
+    sm = malloc(sizeof(double) * n_base_groups * n_base_groups);
+    memset(sm, 0, sizeof(double) * n_base_groups * n_base_groups);
+    for(i = 0; i < groups->n_groups; i++)
+    {
+        /* label each group with a unique ID */
+        groups->groups[i].group_id = i;
+
+        for(j = 0; j < groups->n_groups; j++)
+            sm[i * n_base_groups + j] = compute_strength(groups, i, j, user_data);
+    }
+
 
     do
     {
@@ -1341,15 +1357,12 @@ void group_list_merge(group_list_t* groups, double (*compute_strength)(group_lis
         {
             for(j = i + 1; j < groups->n_groups; j++)
             {
-                if(i != j)
+                cur = sm[groups->groups[i].group_id * n_base_groups + groups->groups[j].group_id];
+                if(cur > max)
                 {
-                    cur = compute_strength(groups, i, j, user_data);
-                    if(cur > max)
-                    {
-                        c1 = i;
-                        c2 = j;
-                        max = cur;
-                    }
+                    c1 = i;
+                    c2 = j;
+                    max = cur;
                 }
             }
         }
@@ -1369,6 +1382,10 @@ void group_list_merge(group_list_t* groups, double (*compute_strength)(group_lis
             free(groups->groups);
             groups->groups = new_list;
             groups->n_groups--;
+            for(i = 0; i < groups->n_groups - 1; i++)
+                sm[new_list[j].group_id * n_base_groups + new_list[i].group_id] = 
+                sm[new_list[i].group_id * n_base_groups + new_list[j].group_id] = 
+                    compute_strength(groups, i, j, user_data);
         }
     }
     while(c1 != -1 && c2 != -1);
