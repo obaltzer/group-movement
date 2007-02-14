@@ -1,5 +1,6 @@
 TOOLS_PATH=../../tools
 BIN_PATH=../../bin
+FIM_APP=${BIN_PATH}/fim_max_rlimit
 
 function reference_image()
 {
@@ -54,7 +55,7 @@ function run()
         # enumerate samples
         ${BIN_PATH}/enumerate -u tmp/${base_name}_${level}.unq -o tmp/${base_name}_${level}.emp tmp/${base_name}_${level}.map > /dev/null
         # run frequent itemset mining
-        ${BIN_PATH}/fim_max tmp/${base_name}_${level}.emp ${support} tmp/${base_name}_${level}.fi > /dev/null
+        ${FIM_APP} tmp/${base_name}_${level}.emp ${support} tmp/${base_name}_${level}.fi > /dev/null
         n_fi=`wc -l tmp/${base_name}_${level}.fi | awk '{print $1}'`
         echo "    Found itemsets: ${n_fi}"
         # match frequent items with trajectories (generate cliques)
@@ -117,3 +118,71 @@ function run_wc()
     fi
 }
 
+function map()
+{
+    levels=`${BIN_PATH}/levels ${base_name}.dat`
+    lx=`echo ${levels} | cut -d" " -f1`
+    ly=`echo ${levels} | cut -d" " -f2`
+    lt=`echo ${levels} | cut -d" " -f3`
+    # check if the current configuration is feasible
+    if test ${space_level} -le ${lx} -a ${time_level} -le ${lt} ; then
+        l=`expr ${lx} - ${space_level}`
+        t=`expr ${lt} - ${time_level}`
+        filename="${base_name}_${time_level}_${space_level}"
+        echo "map: ${filename}.emp"
+        # write map file
+        ${BIN_PATH}/map -l ${l},${l},${t} -o tmp/${filename}.map ${base_name}.dat
+        # enumerate samples
+        ${BIN_PATH}/enumerate -u tmp/${filename}.unq -o tmp/${filename}.emp tmp/${filename}.map > /dev/null
+    fi
+}
+        
+function fim()
+{
+    empname="${base_name}_${time_level}_${space_level}.emp"
+    finame="${base_name}_${support}_${time_level}_${space_level}.fi"
+    if test -s "tmp/${empname}" ; then
+        echo "fim: ${finame}"
+        # run frequent itemset mining
+        ${FIM_APP} tmp/${empname} ${support} tmp/${finame} > /dev/null
+    fi
+}
+
+function match()
+{
+    empname="${base_name}_${time_level}_${space_level}.emp"
+    finame="${base_name}_${support}_${time_level}_${space_level}.fi"
+    clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
+    if test -s "tmp/${finame}" ; then
+        echo "match: ${clname}"
+        # match frequent items with trajectories (generate cliques)
+        ${BIN_PATH}/match -l ${min_length} tmp/${finame} tmp/${empname} tmp/${clname}
+    fi
+}
+
+function do_cc()
+{
+    datname="${base_name}.dat"
+    clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
+    grpname="${base_name}_cc_${support}_${min_length}_${time_level}_${space_level}.grp"
+    if test -s "tmp/${clname}" ; then
+        echo "cc: ${grpname}"
+        ${BIN_PATH}/cc ${datname} tmp/${clname} tmp/${grpname} > /dev/null
+    fi
+}
+
+function do_nc()
+{
+    datname="${base_name}.dat"
+    clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
+    grpname="${base_name}_nc_${nc_threshold}_${support}_${min_length}_${time_level}_${space_level}.grp"
+    if test -s "tmp/${clname}" ; then
+        echo "nc: ${grpname}"
+        ${BIN_PATH}/nc -t ${nc_threshold} ${datname} tmp/${clname} tmp/${grpname} > /dev/null
+    fi
+}
+
+function chop_ext
+{
+    basename $1 | sed -e 's/\.[^\.]\+$//'
+}
