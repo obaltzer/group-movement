@@ -37,6 +37,7 @@ struct visualize_config_s
     char grpfile[256];
     int have_groups;
     int highlight;
+    double line_width;
     int print;
 };
 typedef struct visualize_config_s visualize_config_t;
@@ -86,6 +87,7 @@ int configure(visualize_config_t* config, int argc, char** argv)
         {"groups",      required_argument,  NULL,   'g'},
         {"highlight",   no_argument,        NULL,   'l'},
         {"print",       no_argument,        NULL,   'p'},
+        {"line-width",       required_argument,        NULL,   't'},
         {NULL,      0,                  NULL,   0 }
     };
     
@@ -95,9 +97,10 @@ int configure(visualize_config_t* config, int argc, char** argv)
     config->highlight = 0;
     config->print = FALSE;
     config->have_groups = FALSE;
+    config->line_width = 0.5;
     strcpy(config->output, "output.png");
     
-    while((ch = getopt_long(argc, argv, "w:h:o:g:lp", longopts, NULL)) != -1)
+    while((ch = getopt_long(argc, argv, "w:h:o:g:lpt:", longopts, NULL)) != -1)
     {
         switch(ch)
         {
@@ -106,6 +109,9 @@ int configure(visualize_config_t* config, int argc, char** argv)
                 break;
             case 'h':
                 config->height = atoi(optarg);
+                break;
+            case 't':
+                config->line_width = atof(optarg);
                 break;
             case 'o':
                 strncpy(config->output, optarg, sizeof(config->output));
@@ -162,7 +168,8 @@ void usage()
         " -h, --height n\t\theight n of the output image in pixels (default 400)\n"\
         " -l, --highlight\tif set known individual groups will be highlighted\n"\
         " -o, --output FILE\tfilename of the output PNG file (default: output.png)\n"\
-        " -g, --groups FILE\tfilename of the groups definition file (default: none)\n");
+        " -g, --groups FILE\tfilename of the groups definition file (default: none)\n"\
+        " -t, --line-width\twidth of the lines to draw (default: 0.5)\n");
     exit(-1);
 }
 
@@ -203,7 +210,7 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
     scale_x = (double)config->width / (double)dataset->grid_size;
     scale_y = (double)config->height / (double)dataset->grid_size;
 
-    cairo_set_line_width(cr, 0.5);
+    cairo_set_line_width(cr, config->line_width);
     n_groups = dataset->n_groups;
     gl = dataset->groups;
     if(groups && (groups->n_groups > 0))

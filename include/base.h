@@ -139,6 +139,7 @@ void enumerated_map_print(enumerated_map_t* map);
 void enumerated_trajectory_print(enumerated_trajectory_t* t);
 int enumerated_map_save(enumerated_map_t* map, const char* filename);
 dataset_t* dataset_load(const char* filename);
+void dataset_save(dataset_t* data, char* output);
 void dataset_destroy(dataset_t** dataset_ref);
 void dataset_print(dataset_t* dataset);
 void trajectory_destroy(trajectory_t* trajectory_ref);

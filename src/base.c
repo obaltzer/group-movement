@@ -494,6 +494,39 @@ dataset_t* dataset_load(const char* filename)
     return dataset;
 }
 
+void dataset_save(dataset_t* data, char* output)
+{
+    int fd;
+    int i;
+
+    if((fd = open(output, O_CREAT | O_WRONLY | O_TRUNC, 0666)) == -1)
+    {
+        printf("Cannot create dataset file %s.\n", output);
+        return;
+    }
+    write(fd, &data->grid_size, sizeof(int));
+    write(fd, &data->max_t, sizeof(int));
+    
+    /* write trajectories */
+    write(fd, &data->n_trajectories, sizeof(int));
+    for(i = 0; i < data->n_trajectories; i++)
+    {
+        write(fd, &data->trajectories[i].trajectory_id, sizeof(int));
+        write(fd, &data->trajectories[i].n_samples, sizeof(int));
+        write(fd, data->trajectories[i].samples, sizeof(sample_t) * data->trajectories[i].n_samples);
+    }
+
+    /* write groups */
+    write(fd, &data->n_groups, sizeof(int));
+    for(i = 0; i < data->n_groups; i++)
+    {
+        write(fd, &data->groups[i].group_id, sizeof(int));
+        write(fd, &data->groups[i].n_trajectories, sizeof(int));
+        write(fd, data->groups[i].trajectories, sizeof(int) * data->groups[i].n_trajectories);
+    }
+    close(fd);
+}
+
 int trajectory_write(trajectory_t* t, int fd)
 {
     /* int i = 0; */
@@ -1337,6 +1370,11 @@ void group_list_merge(group_list_t* groups, double (*compute_strength)(group_lis
     /* pre-compute pairwise strength matrix */
     n_base_groups = groups->n_groups;
     sm = malloc(sizeof(double) * n_base_groups * n_base_groups);
+    if(sm == NULL)
+    {
+        fprintf(stderr, "Cannot allocate strength matrix.\n");
+        return;
+    }
     memset(sm, 0, sizeof(double) * n_base_groups * n_base_groups);
     for(i = 0; i < groups->n_groups; i++)
     {

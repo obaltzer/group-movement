@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef WITH_LIMITS
+#include <sys/resource.h>
+#endif
+
 #include "base.h"
 #include "list.h"
 
@@ -118,7 +122,13 @@ int main(int argc, char** argv)
     clique_list_t* cl;
     matrix_t* matrix;
     group_list_t* groups;
+#ifdef WITH_LIMITS
+    struct rlimit cpu_limit = { 600, 600 };
+    struct rlimit mem_limit = { 268435456, 268435456};
 
+    setrlimit(RLIMIT_CPU, &cpu_limit  );
+    setrlimit(RLIMIT_AS, &mem_limit  );
+#endif
     configure(&config, argc, argv);
     data = dataset_load(config.datfile);
     cl = clique_list_load(config.clfile);
