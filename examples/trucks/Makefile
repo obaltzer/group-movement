@@ -3,16 +3,16 @@ include depend.mk
 all: emp fi cl cc_all nc_all
 
 %.emp:
-	@sh map.sh $@
+	@bash map.sh $@
 
 %.fi:
-	@sh fim.sh $@
+	@bash fim.sh $@
 
 %.cl:
-	@sh match.sh $@
+	@bash match.sh $@
 
 %.grp:
-	@sh group.sh $@
+	@bash group.sh $@
 
 emp: $(EMP)
 
