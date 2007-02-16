@@ -184,5 +184,5 @@ function do_nc()
 
 function chop_ext
 {
-    basename $1 | sed -e 's/\.[^\.]\+$//'
+    basename $1 | sed -e 's/\.[[:alnum:]]\{1,\}$//'
 }
