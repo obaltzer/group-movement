@@ -1,6 +1,7 @@
 TOOLS_PATH=../../tools
 BIN_PATH=../../bin
 FIM_APP=${BIN_PATH}/fim_max_rlimit
+TIME=/usr/bin/time
 
 function reference_image()
 {
@@ -107,7 +108,7 @@ function run_wc()
 {
     if test "${wc_threshold}" ; then
         echo -n "    Performing wc... "
-        ${BIN_PATH}/wc -t ${wc_threshold} ${base_name}.dat tmp/${base_name}_${level}.cl tmp/${base_name}_${level}_wc_${wc_threshold}.grp > /dev/null
+        ${BIN_PATH}/wc -t ${wc_threshold} -f tmp/${base_name}_${level}.fi -e tmp/${base_name}_${level}.emp ${base_name}.dat tmp/${base_name}_${level}.cl tmp/${base_name}_${level}_wc_${wc_threshold}.grp > /dev/null
         n_wc_grp=`wc -l tmp/${base_name}_${level}_wc_${wc_threshold}.grp | awk '{print $1}'`
         echo "${n_wc_grp} groups"
         if test "${visualize}" ; then
@@ -129,11 +130,18 @@ function map()
         l=`expr ${lx} - ${space_level}`
         t=`expr ${lt} - ${time_level}`
         filename="${base_name}_${time_level}_${space_level}"
+        stats="tmp/${base_name}_${time_level}_${space_level}.map_stats"
         echo "map: ${filename}.emp"
         # write map file
-        ${BIN_PATH}/map -l ${l},${l},${t} -o tmp/${filename}.map ${base_name}.dat
+        runtime=`get_time ${BIN_PATH}/map -l ${l},${l},${t} -o tmp/${filename}.map ${base_name}.dat`
+        echo "MAP Runtime: ${runtime}" > ${stats}
         # enumerate samples
-        ${BIN_PATH}/enumerate -u tmp/${filename}.unq -o tmp/${filename}.emp tmp/${filename}.map > /dev/null
+        runtime=`get_time ${BIN_PATH}/enumerate -u tmp/${filename}.unq -o tmp/${filename}.emp tmp/${filename}.map`
+        echo "EMAP Runtime: ${runtime}" >> ${stats}
+        trajectories=`wc -l tmp/${filename}.emp | awk '{print $1}'`
+        echo "Trajectories: ${trajectories}" >> ${stats}
+        unique=`wc -l tmp/${filename}.unq | awk '{print $1}'`
+        echo "Unique Items: ${unique}" >> ${stats}
     fi
 }
         
@@ -141,10 +149,15 @@ function fim()
 {
     empname="${base_name}_${time_level}_${space_level}.emp"
     finame="${base_name}_${support}_${time_level}_${space_level}.fi"
+    stats="tmp/${base_name}_${support}_${time_level}_${space_level}.fi_stats"
     if test -s "tmp/${empname}" ; then
         echo "fim: ${finame}"
         # run frequent itemset mining
-        ${FIM_APP} tmp/${empname} ${support} tmp/${finame} > /dev/null
+        runtime=`get_time ${FIM_APP} tmp/${empname} ${support} tmp/${finame}.tmp`
+        mv tmp/${finame}.tmp tmp/${finame}
+        echo "FIM Runtime: ${runtime}" > ${stats}
+        nfi=`wc -l tmp/${finame} | awk '{print $1}'`
+        echo "Frequent Itemsets: ${nfi}" >> ${stats}
     fi
 }
 
@@ -153,10 +166,14 @@ function match()
     empname="${base_name}_${time_level}_${space_level}.emp"
     finame="${base_name}_${support}_${time_level}_${space_level}.fi"
     clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
+    stats="tmp/${base_name}_${support}_${min_length}_${time_level}_${space_level}.match_stats"
     if test -s "tmp/${finame}" ; then
         echo "match: ${clname}"
         # match frequent items with trajectories (generate cliques)
-        ${BIN_PATH}/match -l ${min_length} tmp/${finame} tmp/${empname} tmp/${clname}
+        runtime=`get_time ${BIN_PATH}/match -l ${min_length} tmp/${finame} tmp/${empname} tmp/${clname}`
+        echo "MATCH Runtime: ${runtime}" > ${stats}
+        ncl=`wc -l tmp/${clname} | awk '{print $1}'`
+        echo "Cliques: ${ncl}" >> ${stats}
     fi
 }
 
@@ -165,9 +182,13 @@ function do_cc()
     datname="${base_name}.dat"
     clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
     grpname="${base_name}_cc_${support}_${min_length}_${time_level}_${space_level}.grp"
+    stats="tmp/${base_name}_cc_${support}_${min_length}_${time_level}_${space_level}.stats"
     if test -s "tmp/${clname}" ; then
         echo "cc: ${grpname}"
-        ${BIN_PATH}/cc ${datname} tmp/${clname} tmp/${grpname} > /dev/null
+        runtime=`get_time ${BIN_PATH}/cc ${datname} tmp/${clname} tmp/${grpname}`
+        echo "CC Runtime: ${runtime}" > ${stats}
+        ngrp=`wc -l tmp/${grpname} | awk '{print $1}'`
+        echo "Groups found: ${ngrp}" >> ${stats}
     fi
 }
 
@@ -176,10 +197,36 @@ function do_nc()
     datname="${base_name}.dat"
     clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
     grpname="${base_name}_nc_${nc_threshold}_${support}_${min_length}_${time_level}_${space_level}.grp"
+    stats="tmp/${base_name}_nc_${nc_threshold}_${support}_${min_length}_${time_level}_${space_level}.stats"
     if test -s "tmp/${clname}" ; then
         echo "nc: ${grpname}"
-        ${BIN_PATH}/nc -t ${nc_threshold} ${datname} tmp/${clname} tmp/${grpname} > /dev/null
+        runtime=`get_time ${BIN_PATH}/nc -t ${nc_threshold} ${datname} tmp/${clname} tmp/${grpname}`
+        echo "NC Runtime: ${runtime}" > ${stats}
+        ngrp=`wc -l tmp/${grpname} | awk '{print $1}'`
+        echo "Groups found: ${ngrp}" >> ${stats}
     fi
+}
+
+function do_wc()
+{
+    datname="${base_name}.dat"
+    clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
+    finame="${base_name}_${support}_${time_level}_${space_level}.fi"
+    empname="${base_name}_${time_level}_${space_level}.emp"
+    grpname="${base_name}_wc_${wc_threshold}_${support}_${min_length}_${time_level}_${space_level}.grp"
+    stats="tmp/${base_name}_wc_${wc_threshold}_${support}_${min_length}_${time_level}_${space_level}.stats"
+    if test -s "tmp/${clname}" ; then
+        echo "wc: ${grpname}"
+        runtime=`get_time ${BIN_PATH}/wc -t ${wc_threshold} -f tmp/${finame} -e tmp/${empname} ${datname} tmp/${clname} tmp/${grpname}`
+        echo "WC Runtime: ${runtime}" > ${stats}
+        ngrp=`wc -l tmp/${grpname} | awk '{print $1}'`
+        echo "Groups found: ${ngrp}" >> ${stats}
+    fi
+}
+
+function get_time
+{
+    ${TIME} -f "%U" $@ 2>&1 1>/dev/null
 }
 
 function chop_ext

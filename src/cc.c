@@ -47,7 +47,8 @@ void usage()
         "cc INPUT.dat INPUT.cl OUTPUT.grp\n\n");
 }
 
-void relative_length(dataset_t* data, clique_t* c, int t1, int t2, void* weight)
+#if 0
+void relative_length(clique_t* c, int t1, int t2, void* weight, void* user_data)
 {
     double* w = (double*)weight;
     double nw;
@@ -57,8 +58,9 @@ void relative_length(dataset_t* data, clique_t* c, int t1, int t2, void* weight)
 
     *w = nw;
 }
+#endif
 
-void boolean_connection(dataset_t* data, clique_t* c, int t1, int t2, void* weight)
+void boolean_connection(clique_t* c, int t1, int t2, void* weight, void* user_data)
 {
     (*(int*)weight) = TRUE;
 }
@@ -133,7 +135,7 @@ int main(int argc, char** argv)
     data = dataset_load(config.datfile);
     cl = clique_list_load(config.clfile);
     printf("Generate matrix...\n");
-    matrix = matrix_create(data, cl, sizeof(int), boolean_connection);
+    matrix = matrix_create(data, cl, sizeof(int), NULL, boolean_connection);
     /* matrix_print_int(matrix); */
     printf("Generate group list...\n");
     groups = group_list_from_clique_list(cl);

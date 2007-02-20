@@ -1,17 +1,17 @@
 include depend.mk
 
-all: emp fi cl cc_all nc_all
+all: cc_all nc_all wc_all
 
 %.emp:
 	@bash map.sh $@
 
-%.fi:
+%.fi: emp
 	@bash fim.sh $@
 
-%.cl:
+%.cl: fi
 	@bash match.sh $@
 
-%.grp:
+%.grp: cl
 	@bash group.sh $@
 
 emp: $(EMP)
@@ -23,3 +23,5 @@ cl: $(CL)
 cc_all: $(CC)
 
 nc_all: $(NC)
+
+wc_all: $(WC)

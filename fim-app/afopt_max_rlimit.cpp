@@ -26,7 +26,7 @@ void MineMaxPats();
 
 int main(int argc, char *argv[])
 {
-        struct rlimit cpu_limit = { 600, 600 };
+        struct rlimit cpu_limit = { 300, 300 };
         struct rlimit mem_limit = { 268435456, 268435456};
         setrlimit(RLIMIT_CPU, &cpu_limit  );
         setrlimit(RLIMIT_AS, &mem_limit  );

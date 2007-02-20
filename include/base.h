@@ -148,6 +148,7 @@ int trajectory_write(trajectory_t* t, int fd);
 int trajectory_map(trajectory_t* in, trajectory_t* out, map_level_t* level);
 int trajectory_read(trajectory_t* t, int fd);
 void sample_destroy(sample_t* sample_ref);
+void sample_fprint(FILE* file, sample_t* sample);
 void sample_print(sample_t* sample);
 void sample_map(sample_t* in, sample_t* out, map_level_t* level);
 int sample_write(sample_t* s, int fd);
@@ -177,8 +178,8 @@ void clique_list_save(clique_list_t* cl, char* filename);
 clique_list_t* clique_list_load(char* filename);
 void clique_list_print(clique_list_t* cl);
 void matrix_destroy(matrix_t* matrix);
-matrix_t* matrix_create(dataset_t* data, clique_list_t* cl, size_t weight_size,
-                        void (*weight_function)(dataset_t*, clique_t*, int, int, void*));
+matrix_t* matrix_create(dataset_t* data, clique_list_t* cl, size_t weight_size, void* user_data,
+                        void (*weight_function)(clique_t*, int, int, void*, void*));
 void group_list_destroy(group_list_t* groups);
 group_list_t* group_list_from_clique_list(clique_list_t* cliques);
 group_t group_merge(group_t* g1, group_t* g2);

@@ -1,22 +1,22 @@
-#l = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12]
-#t = [2]
-#s = [5]
-#pl = [40]
-#th = [0.75]
+l = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+t = [2]
+s = [5]
+pl = [40]
+th = [0.75]
 
-l = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12]
+#l = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12]
 #t = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12]
-t = [0, 2, 4]
-s = [5, 10, 15, 20, 25, 30, 35, 40]
-pl = [5, 10, 15, 20, 25, 30, 35, 40]
-th = [0.15, 0.25, 0.5, 0.75, 1.0]
+#t = [0, 2, 4]
+#s = [5, 10, 15, 20, 25, 30, 35, 40]
+#pl = [5, 10, 15, 20, 25, 30, 35, 40]
+#th = [0.15, 0.25, 0.5, 0.75, 1.0]
 
 emp = [t, l].reverse
 fi = [s, t, l].reverse
 cl = [s, pl, t, l].reverse
 cc = [s, pl, t, l].reverse
 nc = [th, s, pl, t, l].reverse
-
+wc = nc
 #list = [d, a, th].reverse
 
 @@combs = []
@@ -56,3 +56,7 @@ puts "CC = " + @@combs.collect { |c| "tmp/" + base_name + "_cc_" + c.join("_") +
 @@combs = []
 gen_combinations(nc)
 puts "NC = " + @@combs.collect { |c| "tmp/" + base_name + "_nc_" + c.join("_") + ".grp" }.join(" ")
+
+@@combs = []
+gen_combinations(wc)
+puts "WC = " + @@combs.collect { |c| "tmp/" + base_name + "_wc_" + c.join("_") + ".grp" }.join(" ")

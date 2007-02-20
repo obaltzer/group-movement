@@ -273,17 +273,20 @@ void unique_samples_destroy(unique_samples_t* samples)
 
 void unique_samples_save(unique_samples_t* samples, const char* filename)
 {
-    int fd;
+    FILE* out;
+    int i = 0;
 
-    if((fd = open(filename, O_WRONLY | O_CREAT| O_TRUNC, 0666)) == -1)
+    if((out = fopen(filename, "w")) == NULL)
     {
         printf("Unable to create file unique samples file %s.\n", filename);
         return;
     }
-
-    write(fd, &samples->n_samples, sizeof(int));
-    write(fd, samples->samples, sizeof(sample_t) * samples->n_samples);
-    close(fd);
+    for(; i < samples->n_samples; i++)
+    {
+        sample_fprint(out, samples->samples + i);
+        fputc('\n', out);
+    }
+    fclose(out);
 }
 
 int unique_samples_index(unique_samples_t* samples, sample_t* sample)
@@ -313,6 +316,7 @@ int unique_samples_index(unique_samples_t* samples, sample_t* sample)
     }
     return i;
 }
+
 void dataset_print(dataset_t* dataset)
 {
     int i = 0;
@@ -339,9 +343,14 @@ void trajectory_print(trajectory_t* trajectory)
     printf("\n");
 }
 
+void sample_fprint(FILE* file, sample_t* sample)
+{
+    fprintf(file, "(%d, %d, %d)", sample->x, sample->y, sample->t);
+}
+
 void sample_print(sample_t* sample)
 {
-    printf("(%d, %d, %d)", sample->x, sample->y, sample->t);
+    sample_fprint(stdout, sample);    
 }
 
 void group_print(group_t* group)
@@ -1220,7 +1229,8 @@ void matrix_destroy(matrix_t* matrix)
 }
 
 matrix_t* matrix_create(dataset_t* data, clique_list_t* cl, size_t weight_size,
-                        void (*weight_function)(dataset_t*, clique_t*, int, int, void*))
+                        void* user_data,
+                        void (*weight_function)(clique_t*, int, int, void*, void*))
 {
     int c_i = 0;
     int t1;
@@ -1252,7 +1262,7 @@ matrix_t* matrix_create(dataset_t* data, clique_list_t* cl, size_t weight_size,
             for(t2 = 0; t2 < cl->cliques[c_i].n_trajectories; t2++)
             {
                 w = matrix->matrix + (matrix->weight_size * ((matrix->n_trajectories * cl->cliques[c_i].trajectories[t2]) + cl->cliques[c_i].trajectories[t1]));
-                weight_function(data, cl->cliques + c_i, t1, t2, w);
+                weight_function(cl->cliques + c_i, t1, t2, w, user_data);
             }
         }
     }
@@ -1427,6 +1437,7 @@ void group_list_merge(group_list_t* groups, double (*compute_strength)(group_lis
         }
     }
     while(c1 != -1 && c2 != -1);
+    free(sm);
 }
 
 void group_list_print(group_list_t* groups)

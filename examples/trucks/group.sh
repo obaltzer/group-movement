@@ -19,5 +19,12 @@ elif test "${al}" == "nc" ; then
     time_level=`echo ${file} | cut -d"_" -f6`
     space_level=`echo ${file} | cut -d"_" -f7`
     do_nc
+elif test "${al}" == "wc" ; then
+    wc_threshold=`echo ${file} | cut -d"_" -f3`
+    support=`echo ${file} | cut -d"_" -f4`
+    min_length=`echo ${file} | cut -d"_" -f5`
+    time_level=`echo ${file} | cut -d"_" -f6`
+    space_level=`echo ${file} | cut -d"_" -f7`
+    do_wc
 fi
 touch $1
