@@ -804,7 +804,9 @@ int subsequence_match(int* seq, size_t seq_s, int* sub, size_t sub_s)
 {
     int i = 0;
     int c = 0;
-    
+
+    qsort(seq, seq_s, sizeof(int), int_cmp);
+    qsort(sub, sub_s, sizeof(int), int_cmp);
     if(seq_s < sub_s)
         return FALSE;
     else
