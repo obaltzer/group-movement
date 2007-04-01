@@ -37,6 +37,7 @@ struct visualize_config_s
     char grpfile[256];
     int have_groups;
     int highlight;
+    int split;
     double line_width;
     int print;
 };
@@ -81,12 +82,13 @@ int configure(visualize_config_t* config, int argc, char** argv)
     int ch;
 
     static struct option longopts[] = {
-        {"width",       required_argument,  NULL,   'w'},
-        {"height",      required_argument,  NULL,   'h'},
-        {"output",      required_argument,  NULL,   'o'},
-        {"groups",      required_argument,  NULL,   'g'},
-        {"highlight",   no_argument,        NULL,   'l'},
-        {"print",       no_argument,        NULL,   'p'},
+        {"width",           required_argument,  NULL,   'w'},
+        {"height",          required_argument,  NULL,   'h'},
+        {"output",          required_argument,  NULL,   'o'},
+        {"groups",          required_argument,  NULL,   'g'},
+        {"split-groups",    no_argument,        NULL,   'G'},
+        {"highlight",       no_argument,        NULL,   'l'},
+        {"print",           no_argument,        NULL,   'p'},
         {"line-width",       required_argument,        NULL,   't'},
         {NULL,      0,                  NULL,   0 }
     };
@@ -94,13 +96,14 @@ int configure(visualize_config_t* config, int argc, char** argv)
     /* DEFAULTS */
     config->width = 400;
     config->height = 400;
-    config->highlight = 0;
+    config->highlight = FALSE;
     config->print = FALSE;
     config->have_groups = FALSE;
     config->line_width = 0.5;
-    strcpy(config->output, "output.png");
+    config->split = FALSE;
+    config->output[0] = '\0';
     
-    while((ch = getopt_long(argc, argv, "w:h:o:g:lpt:", longopts, NULL)) != -1)
+    while((ch = getopt_long(argc, argv, "Gg:w:h:o:g:lpt:", longopts, NULL)) != -1)
     {
         switch(ch)
         {
@@ -119,10 +122,13 @@ int configure(visualize_config_t* config, int argc, char** argv)
             case 'g':
                 strncpy(config->grpfile, optarg, sizeof(config->grpfile));
                 config->have_groups = TRUE;
-                config->highlight = 1;
+                config->highlight = TRUE;
+                break;
+            case 'G':
+                config->split = TRUE;
                 break;
             case 'l':
-                config->highlight = 1;
+                config->highlight = TRUE;
                 break;
             case 'p':
                 config->print = TRUE;
@@ -145,6 +151,19 @@ int configure(visualize_config_t* config, int argc, char** argv)
         printf("Image height must be at least 1.\n");
         exit(-2);
     }
+    
+    if(!strlen(config->output))
+    {
+        switch(config->split)
+        {
+            case TRUE:
+                strcpy(config->output, "output_%04d.png");
+                break;
+            default:
+                strcpy(config->output, "output.png");
+        }
+    }
+                
     if(argc == 0)
     {
         printf("Input file name missing.\n");
@@ -169,6 +188,7 @@ void usage()
         " -l, --highlight\tif set known individual groups will be highlighted\n"\
         " -o, --output FILE\tfilename of the output PNG file (default: output.png)\n"\
         " -g, --groups FILE\tfilename of the groups definition file (default: none)\n"\
+        " -G, --split-groups\tCreate an individual image for each group (default: off)\n"\
         " -t, --line-width\twidth of the lines to draw (default: 0.5)\n");
     exit(-1);
 }
@@ -186,6 +206,7 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
     int n_groups;
     group_t* gl;
     double* c;
+    char filename_buf[256];
 
     if((imgbuf = malloc(sizeof(unsigned char) * config->width * config->height * 4)) == NULL)
     {
@@ -202,26 +223,38 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
     );
 
     cr = cairo_create(surface);
-
-    cairo_rectangle(cr, 0, 0, (double)config->width, (double)config->height);
-    cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
-    cairo_fill(cr);
-    
+        
     scale_x = (double)config->width / (double)dataset->grid_size;
     scale_y = (double)config->height / (double)dataset->grid_size;
-
     cairo_set_line_width(cr, config->line_width);
+
     n_groups = dataset->n_groups;
     gl = dataset->groups;
+    
     if(groups && (groups->n_groups > 0))
     {
         n_groups = groups->n_groups;
         gl = groups->groups;
     }
+    
+    if(!config->split || n_groups == 0)
+    {
+        cairo_rectangle(cr, 0, 0, (double)config->width, (double)config->height);
+        cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
+        cairo_fill(cr);
+    }
+    
     if(n_groups > 0)
     {
         for(g = 0; g < n_groups; g++)
         {
+            if(config->split)
+            {
+                cairo_rectangle(cr, 0, 0, (double)config->width, (double)config->height);
+                cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
+                cairo_fill(cr);
+            }
+            
             for(t = 0; t < gl[g].n_trajectories; t++)
             {
                 trajectory_t* tr =
@@ -243,6 +276,12 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
             else
                 cairo_set_source_rgb(cr, 0.0, 0.7, 0.0);
             cairo_stroke(cr);
+
+            if(config->split)
+            {
+                snprintf(filename_buf, sizeof(filename_buf), config->output, g);
+                cairo_surface_write_to_png(surface, filename_buf);
+            }
         }
     }
     else
@@ -263,7 +302,9 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
         cairo_stroke(cr);
     }
 
-    cairo_surface_write_to_png(surface, config->output);
+    if(!config->split || n_groups == 0)
+        cairo_surface_write_to_png(surface, config->output);
+    
     cairo_destroy(cr);
     cairo_surface_destroy(surface);
     free(imgbuf);

@@ -183,7 +183,7 @@ matrix_t* matrix_create(dataset_t* data, clique_list_t* cl, size_t weight_size, 
 void group_list_destroy(group_list_t* groups);
 group_list_t* group_list_from_clique_list(clique_list_t* cliques);
 group_t group_merge(group_t* g1, group_t* g2);
-void group_list_merge(group_list_t* groups, double (*compute_strength)(group_list_t*, int, int, void*), void* user_data);
+void group_list_merge(group_list_t* groups, double (*compute_strength)(group_list_t*, int, int, void*), void (*update_user_data)(int, int, int, double, void*), void* user_data);
 void group_list_print(group_list_t* groups);
 void group_list_save(group_list_t* groups, char* filename);
 group_list_t* group_list_load(char* filename);

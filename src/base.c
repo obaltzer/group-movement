@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <assert.h>
 
 #include "base.h"
 #include "list.h"
@@ -846,8 +847,12 @@ clique_t* clique_create(frequent_itemset_t* fi, enumerated_map_t* emap)
     for(; i < emap->n_trajectories; i++)
     {
         t = emap->trajectories + i;
+        /* printf("t(%d) : fi(%d) -> %s ->", t->n_sample_ids, fi->n_items, t->n_sample_ids >= fi->n_items ? "GOOD" : "BAD"); */
         if(subsequence_match(t->sample_ids, t->n_sample_ids, fi->items, fi->n_items))
+        {
+            assert(t->n_sample_ids >= fi->n_items);
             list_append(l, t);
+        }
     }
     clique = malloc(sizeof(clique_t));
     if(clique == NULL)
@@ -1271,6 +1276,18 @@ matrix_t* matrix_create(dataset_t* data, clique_list_t* cl, size_t weight_size,
     return matrix;
 }
 
+#if 0
+void matrix_threshold(matrix_t* matrix, void (*threshold_function)(int t1, int t2, void* weight, void* user_data))
+{
+    int i;
+    int j;
+
+    for(i = 0; i < matrix->n_trajectories; i++)
+        for(j = 0; j < matrix->n_trajectories; j++)
+            threshold_function(i, j, matrix->matrix + (matrix->weight_size * ((matrix->n_trajectories * i) + j)), user_data);
+}
+#endif
+
 void group_list_destroy(group_list_t* groups)
 {
     if(groups)
@@ -1310,6 +1327,7 @@ group_list_t* group_list_from_clique_list(clique_list_t* cliques)
     memset(groups->groups, 0, sizeof(group_t) * groups->n_groups);
     for(; i < cliques->n_cliques; i++)
     {
+        groups->groups[i].group_id = i;
         groups->groups[i].n_trajectories = cliques->cliques[i].n_trajectories;
         groups->groups[i].trajectories = malloc(sizeof(int) * groups->groups[i].n_trajectories);
         if(groups->groups[i].trajectories == NULL)
@@ -1339,7 +1357,10 @@ group_t group_merge(group_t* g1, group_t* g2)
     int i;
     list_t* l;
     group_t g;
-  
+ 
+    printf("Merging groups %d and %d:\n", g1->group_id, g2->group_id);
+    group_print(g1);
+    group_print(g2);
     g.group_id = g1->group_id;
     g.n_trajectories = 0;
     g.trajectories = NULL;
@@ -1364,10 +1385,11 @@ group_t group_merge(group_t* g1, group_t* g2)
     g.trajectories = list_to_array(l, sizeof(int));
     list_destroy(l, NULL);
     free(t);
+    group_print(&g);
     return g;
 }
 
-void group_list_merge(group_list_t* groups, double (*compute_strength)(group_list_t*, int, int, void*), void* user_data)
+void group_list_merge(group_list_t* groups, double (*compute_strength)(group_list_t*, int, int, void*), void (*update_user_data)(int, int, int, double, void*), void* user_data)
 {
     int i;
     int j;
@@ -1390,9 +1412,6 @@ void group_list_merge(group_list_t* groups, double (*compute_strength)(group_lis
     memset(sm, 0, sizeof(double) * n_base_groups * n_base_groups);
     for(i = 0; i < groups->n_groups; i++)
     {
-        /* label each group with a unique ID */
-        groups->groups[i].group_id = i;
-
         for(j = 0; j < groups->n_groups; j++)
             sm[i * n_base_groups + j] = compute_strength(groups, i, j, user_data);
     }
@@ -1436,6 +1455,8 @@ void group_list_merge(group_list_t* groups, double (*compute_strength)(group_lis
                 sm[new_list[j].group_id * n_base_groups + new_list[i].group_id] = 
                 sm[new_list[i].group_id * n_base_groups + new_list[j].group_id] = 
                     compute_strength(groups, i, j, user_data);
+            if(update_user_data)
+                update_user_data(new_list[j].group_id, c1, c2, max, user_data);
         }
     }
     while(c1 != -1 && c2 != -1);

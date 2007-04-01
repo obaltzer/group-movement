@@ -1,7 +1,7 @@
 TOOLS_PATH=../../tools
 BIN_PATH=../../bin
 FIM_APP=${BIN_PATH}/fim_max_rlimit
-TIME=/usr/bin/time
+TIME=/usr/local/bin/time
 
 function reference_image()
 {
@@ -207,6 +207,22 @@ function do_nc()
     fi
 }
 
+function do_nc2()
+{
+    datname="${base_name}.dat"
+    clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
+    grpname="${base_name}_nc2_${nc_threshold}_${support}_${min_length}_${time_level}_${space_level}.grp"
+    finame="${base_name}_${support}_${time_level}_${space_level}.fi"
+    stats="tmp/${base_name}_nc2_${nc_threshold}_${support}_${min_length}_${time_level}_${space_level}.stats"
+    if test -s "tmp/${clname}" ; then
+        echo "nc2: ${grpname}"
+        runtime=`get_time ${BIN_PATH}/nc2 -t ${nc_threshold} -f tmp/${finame} ${datname} tmp/${clname} tmp/${grpname}`
+        echo "NC2 Runtime: ${runtime}" > ${stats}
+        ngrp=`wc -l tmp/${grpname} | awk '{print $1}'`
+        echo "Groups found: ${ngrp}" >> ${stats}
+    fi
+}
+
 function do_wc()
 {
     datname="${base_name}.dat"
@@ -219,6 +235,23 @@ function do_wc()
         echo "wc: ${grpname}"
         runtime=`get_time ${BIN_PATH}/wc -t ${wc_threshold} -f tmp/${finame} -e tmp/${empname} ${datname} tmp/${clname} tmp/${grpname}`
         echo "WC Runtime: ${runtime}" > ${stats}
+        ngrp=`wc -l tmp/${grpname} | awk '{print $1}'`
+        echo "Groups found: ${ngrp}" >> ${stats}
+    fi
+}
+
+function do_wc2()
+{
+    datname="${base_name}.dat"
+    clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
+    finame="${base_name}_${support}_${time_level}_${space_level}.fi"
+    empname="${base_name}_${time_level}_${space_level}.emp"
+    grpname="${base_name}_wc2_${wc_threshold}_${support}_${min_length}_${time_level}_${space_level}.grp"
+    stats="tmp/${base_name}_wc2_${wc_threshold}_${support}_${min_length}_${time_level}_${space_level}.stats"
+    if test -s "tmp/${clname}" ; then
+        echo "wc2: ${grpname}"
+        runtime=`get_time ${BIN_PATH}/wc2 -t ${wc_threshold} -f tmp/${finame} -e tmp/${empname} ${datname} tmp/${clname} tmp/${grpname}`
+        echo "WC2 Runtime: ${runtime}" > ${stats}
         ngrp=`wc -l tmp/${grpname} | awk '{print $1}'`
         echo "Groups found: ${ngrp}" >> ${stats}
     fi

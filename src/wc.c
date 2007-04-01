@@ -102,8 +102,8 @@ void alignment_amount(clique_t* c, int t1, int t2, void* weight, void* user_data
 {
     wc_data_t* data = (wc_data_t*)user_data;
     int len_fi = data->fi->frequent_itemsets[c->frequent_itemset_id].n_items;
-    int len_t1 = data->emap->trajectories[t1].n_sample_ids;
-    int len_t2 = data->emap->trajectories[t2].n_sample_ids;
+    int len_t1 = data->emap->trajectories[c->trajectories[t1]].n_sample_ids;
+    int len_t2 = data->emap->trajectories[c->trajectories[t2]].n_sample_ids;
 
     (*(double*)weight) = (double)(len_fi * 2) / (double)(len_t1 + len_t2);
 }
@@ -183,6 +183,7 @@ int main(int argc, char** argv)
     wc_data.emap = enumerated_map_load(config.empfile);
     wc_data.fi = frequent_itemset_list_load(config.fifile, 0);
     printf("Generate matrix...\n");
+    wc_data.threshold = config.threshold;
     matrix = matrix_create(data, cl, sizeof(double), &wc_data, alignment_amount);
     /* matrix_print_int(matrix); */
     printf("Generate group list...\n");
@@ -190,8 +191,7 @@ int main(int argc, char** argv)
     /* group_list_print(groups); */
     printf("Merging groups...\n");
     wc_data.matrix = matrix;
-    wc_data.threshold = config.threshold;
-    group_list_merge(groups, wc_strength, &wc_data);
+    group_list_merge(groups, wc_strength, NULL, &wc_data);
     group_list_save(groups, config.grpfile);
     group_list_destroy(groups);
     matrix_destroy(matrix);

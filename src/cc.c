@@ -141,7 +141,7 @@ int main(int argc, char** argv)
     groups = group_list_from_clique_list(cl);
     /* group_list_print(groups); */
     printf("Merging groups...\n");
-    group_list_merge(groups, boolean_strength, matrix);
+    group_list_merge(groups, boolean_strength, NULL, matrix);
     group_list_save(groups, config.grpfile);
     group_list_destroy(groups);
     matrix_destroy(matrix);
