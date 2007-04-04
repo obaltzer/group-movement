@@ -319,14 +319,20 @@ int main(int argc, char** argv)
         {
             n = 0;
             while(n < n_nodes && active_nodes[n] == config.n_proc)
+            {
+                printf("Master: Checking for free nodes %d\n", n);
                 n++;
+            }
             if(n == n_nodes)
             {
+                printf("Master: waiting for node\n");
 	        MPI_Recv(&n, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+                printf("Master: received from node %d\n", n);
                 active_nodes[n]--;
             }
 	    
             MPI_Send(&i, 1, MPI_INT, n + 1, 0, MPI_COMM_WORLD);
+            printf("Master: send job %d to node %d\n", i, n);
             active_nodes[n]++;
         }
         /* send all nodes command to terminate */
