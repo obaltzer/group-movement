@@ -1,7 +1,7 @@
 TOOLS_PATH=../../tools
 BIN_PATH=../../bin
 FIM_APP=${BIN_PATH}/fim_max_rlimit
-TIME=/usr/local/bin/time
+TIME=/usr/bin/time
 
 function reference_image()
 {

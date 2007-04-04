@@ -2,7 +2,7 @@
 
 . ../functions.sh
 
-base_name=busses
+base_name=buses
 time_level=2
 support=5
 min_length=40

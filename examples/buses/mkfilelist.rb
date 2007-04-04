@@ -35,7 +35,7 @@ def gen_combinations(list, com = [])
   end
 end
 
-base_name="busses"
+base_name="buses"
 
 @@combs = []
 gen_combinations(emp)
