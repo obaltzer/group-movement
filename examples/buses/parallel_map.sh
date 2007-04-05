@@ -7,6 +7,8 @@
 ##$ -j yes
 #$ -S /bin/bash
 #$ -cwd
+#$ -e logs
+#$ -o logs
 
 #########################################################################
 #
@@ -14,5 +16,5 @@
 
 echo "Number of slots is: $NSLOTS"
 
-mpirun -np $NSLOTS ../../src/parallel -c "sh ./map.sh tmp/buses_%1_%0.emp" -n 1 -f "map_%1_%0.flag" -p map_list.txt
+mpirun -np $NSLOTS ../../bin/parallel -c "sh ./map.sh buses data %0 %1" -n 1 -f "map_%1_%0.flag" -p map_list.txt
 #########################################################################

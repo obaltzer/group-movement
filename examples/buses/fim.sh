@@ -2,11 +2,10 @@
 
 . ../functions.sh
 
-file=`chop_ext $1`
-base_name=`echo ${file} | cut -d"_" -f1`
-support=`echo ${file} | cut -d"_" -f2`
-time_level=`echo ${file} | cut -d"_" -f3`
-space_level=`echo ${file} | cut -d"_" -f4`
+base_name=$1
+target_dir=$2
+space_level=$3
+time_level=$4
+support=$5
 
 fim
-touch $1
