@@ -311,28 +311,28 @@ int main(int argc, char** argv)
         int* active_nodes;
         int n = 0;
         int done = 0;
+        int progress = 0;
         
         n_nodes--;
         active_nodes = malloc(sizeof(int) * n_nodes);
         memset(active_nodes, 0, sizeof(int) * n_nodes);
         for(i = 0; i < psl->n_sets; i++)
         {
+            if(i * 100 / psl->n_sets != progress)
+            {
+                progress = i * 100 / psl->n_sets;
+                fprintf(stderr, "%d%%\n", progress);
+            }
             n = 0;
             while(n < n_nodes && active_nodes[n] == config.n_proc)
-            {
-                printf("Master: Checking for free nodes %d\n", n);
                 n++;
-            }
             if(n == n_nodes)
             {
-                printf("Master: waiting for node\n");
 	        MPI_Recv(&n, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
-                printf("Master: received from node %d\n", n);
                 active_nodes[n]--;
             }
 	    
             MPI_Send(&i, 1, MPI_INT, n + 1, 0, MPI_COMM_WORLD);
-            printf("Master: send job %d to node %d\n", i, n);
             active_nodes[n]++;
         }
         /* send all nodes command to terminate */
@@ -370,10 +370,8 @@ int main(int argc, char** argv)
                 active--;
             }
 	    MPI_Recv(&i, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
-            printf("Node %d: received %d\n", rank, i);
             if(i != -1)
             {
-                printf("Node %d: start %d child\n", rank, active + 1);
                 if(fork() == 0)
                 {
                     if(!parameter_set_check_flag(config.flag_name, &psl->sets[i]))
@@ -383,7 +381,6 @@ int main(int argc, char** argv)
                     }   
                     else
                     {
-                        printf("Do not execute. Parameter set is flagged: ");
                         parameter_set_print(&psl->sets[i]);
                     }
                     parameter_set_list_destroy(psl);
