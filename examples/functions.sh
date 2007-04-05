@@ -121,6 +121,7 @@ function run_wc()
 
 function map()
 {
+    echo ${BIN_PATH}/levels ${base_name}.dat
     levels=`${BIN_PATH}/levels ${base_name}.dat`
     lx=`echo ${levels} | cut -d" " -f1`
     ly=`echo ${levels} | cut -d" " -f2`
@@ -129,130 +130,87 @@ function map()
     if test ${space_level} -le ${lx} -a ${time_level} -le ${lt} ; then
         l=`expr ${lx} - ${space_level}`
         t=`expr ${lt} - ${time_level}`
-        filename="${base_name}_${time_level}_${space_level}"
-        stats="tmp/${base_name}_${time_level}_${space_level}.map_stats"
+        filename="${time_level}_${space_level}"
+        path="${target_dir}/${base_name}/map"
+        mkdir -p ${path}
+        stats="${path}/${filename}.stats"
         echo "map: ${filename}.emp"
         # write map file
-        runtime=`get_time ${BIN_PATH}/map -l ${l},${l},${t} -o tmp/${filename}.map ${base_name}.dat`
+        runtime=`get_time ${BIN_PATH}/map -l ${l},${l},${t} -o ${path}/${filename}.map ${base_name}.dat`
         echo "MAP Runtime: ${runtime}" > ${stats}
         # enumerate samples
-        runtime=`get_time ${BIN_PATH}/enumerate -u tmp/${filename}.unq -o tmp/${filename}.emp tmp/${filename}.map`
+        runtime=`get_time ${BIN_PATH}/enumerate -u ${path}/${filename}.unq -o ${path}/${filename}.emp ${path}/${filename}.map`
         echo "EMAP Runtime: ${runtime}" >> ${stats}
-        trajectories=`wc -l tmp/${filename}.emp | awk '{print $1}'`
+        trajectories=`wc -l ${path}/${filename}.emp | awk '{print $1}'`
         echo "Trajectories: ${trajectories}" >> ${stats}
-        unique=`wc -l tmp/${filename}.unq | awk '{print $1}'`
+        unique=`wc -l ${path}/${filename}.unq | awk '{print $1}'`
         echo "Unique Items: ${unique}" >> ${stats}
     fi
 }
         
 function fim()
 {
-    empname="${base_name}_${time_level}_${space_level}.emp"
-    finame="${base_name}_${support}_${time_level}_${space_level}.fi"
-    stats="tmp/${base_name}_${support}_${time_level}_${space_level}.fi_stats"
-    if test -s "tmp/${empname}" ; then
+    path="${target_dir}/${base_name}/fim/${support}"
+    mkdir -p ${path}
+    empname="${target_dir}/${base_name}/map/${time_level}_${space_level}.emp"
+    finame="${path}/${time_level}_${space_level}.fi"
+    stats="${path}/${time_level}_${space_level}.stats"
+    if test -s "${empname}" ; then
         echo "fim: ${finame}"
         # run frequent itemset mining
-        runtime=`get_time ${FIM_APP} tmp/${empname} ${support} tmp/${finame}.tmp`
-        mv tmp/${finame}.tmp tmp/${finame}
+        runtime=`get_time ${FIM_APP} ${empname} ${support} ${finame}.tmp`
+        mv ${finame}.tmp ${finame}
         echo "FIM Runtime: ${runtime}" > ${stats}
-        nfi=`wc -l tmp/${finame} | awk '{print $1}'`
+        nfi=`wc -l ${finame} | awk '{print $1}'`
         echo "Frequent Itemsets: ${nfi}" >> ${stats}
     fi
 }
 
 function match()
 {
-    empname="${base_name}_${time_level}_${space_level}.emp"
-    finame="${base_name}_${support}_${time_level}_${space_level}.fi"
-    clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
-    stats="tmp/${base_name}_${support}_${min_length}_${time_level}_${space_level}.match_stats"
-    if test -s "tmp/${finame}" ; then
+    path="${target_dir}/${base_name}/cliques/${support}/${min_length}"
+    mkdir -p ${path}
+    empname="${target_dir}/${base_name}/map/${time_level}_${space_level}.emp"
+    finame="${target_dir}/${base_name}/fim/${support}/${time_level}_${space_level}.fi"
+    clname="${path}/${time_level}_${space_level}.cl"
+    stats="${path}/${time_level}_${space_level}.stats"
+    if test -s "${finame}" ; then
         echo "match: ${clname}"
         # match frequent items with trajectories (generate cliques)
-        runtime=`get_time ${BIN_PATH}/match -l ${min_length} tmp/${finame} tmp/${empname} tmp/${clname}`
+        runtime=`get_time ${BIN_PATH}/match -l ${min_length} ${finame} ${empname} ${clname}`
         echo "MATCH Runtime: ${runtime}" > ${stats}
-        ncl=`wc -l tmp/${clname} | awk '{print $1}'`
+        ncl=`wc -l ${clname} | awk '{print $1}'`
         echo "Cliques: ${ncl}" >> ${stats}
     fi
 }
 
-function do_cc()
+function group()
 {
-    datname="${base_name}.dat"
-    clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
-    grpname="${base_name}_cc_${support}_${min_length}_${time_level}_${space_level}.grp"
-    stats="tmp/${base_name}_cc_${support}_${min_length}_${time_level}_${space_level}.stats"
-    if test -s "tmp/${clname}" ; then
-        echo "cc: ${grpname}"
-        runtime=`get_time ${BIN_PATH}/cc ${datname} tmp/${clname} tmp/${grpname}`
-        echo "CC Runtime: ${runtime}" > ${stats}
-        ngrp=`wc -l tmp/${grpname} | awk '{print $1}'`
-        echo "Groups found: ${ngrp}" >> ${stats}
+    if test "${algorithm}" != "cc" ; then
+        path="${target_dir}/${base_name}/${algorithm}/${weight}/${support}/${min_length}"
+    else
+        path="${target_dir}/${base_name}/${algorithm}/0.0/${support}/${min_length}"
     fi
-}
-
-function do_nc()
-{
     datname="${base_name}.dat"
-    clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
-    grpname="${base_name}_nc_${nc_threshold}_${support}_${min_length}_${time_level}_${space_level}.grp"
-    stats="tmp/${base_name}_nc_${nc_threshold}_${support}_${min_length}_${time_level}_${space_level}.stats"
-    if test -s "tmp/${clname}" ; then
-        echo "nc: ${grpname}"
-        runtime=`get_time ${BIN_PATH}/nc -t ${nc_threshold} ${datname} tmp/${clname} tmp/${grpname}`
-        echo "NC Runtime: ${runtime}" > ${stats}
-        ngrp=`wc -l tmp/${grpname} | awk '{print $1}'`
-        echo "Groups found: ${ngrp}" >> ${stats}
-    fi
-}
-
-function do_nc2()
-{
-    datname="${base_name}.dat"
-    clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
-    grpname="${base_name}_nc2_${nc_threshold}_${support}_${min_length}_${time_level}_${space_level}.grp"
-    finame="${base_name}_${support}_${time_level}_${space_level}.fi"
-    stats="tmp/${base_name}_nc2_${nc_threshold}_${support}_${min_length}_${time_level}_${space_level}.stats"
-    if test -s "tmp/${clname}" ; then
-        echo "nc2: ${grpname}"
-        runtime=`get_time ${BIN_PATH}/nc2 -t ${nc_threshold} -f tmp/${finame} ${datname} tmp/${clname} tmp/${grpname}`
-        echo "NC2 Runtime: ${runtime}" > ${stats}
-        ngrp=`wc -l tmp/${grpname} | awk '{print $1}'`
-        echo "Groups found: ${ngrp}" >> ${stats}
-    fi
-}
-
-function do_wc()
-{
-    datname="${base_name}.dat"
-    clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
-    finame="${base_name}_${support}_${time_level}_${space_level}.fi"
-    empname="${base_name}_${time_level}_${space_level}.emp"
-    grpname="${base_name}_wc_${wc_threshold}_${support}_${min_length}_${time_level}_${space_level}.grp"
-    stats="tmp/${base_name}_wc_${wc_threshold}_${support}_${min_length}_${time_level}_${space_level}.stats"
-    if test -s "tmp/${clname}" ; then
-        echo "wc: ${grpname}"
-        runtime=`get_time ${BIN_PATH}/wc -t ${wc_threshold} -f tmp/${finame} -e tmp/${empname} ${datname} tmp/${clname} tmp/${grpname}`
-        echo "WC Runtime: ${runtime}" > ${stats}
-        ngrp=`wc -l tmp/${grpname} | awk '{print $1}'`
-        echo "Groups found: ${ngrp}" >> ${stats}
-    fi
-}
-
-function do_wc2()
-{
-    datname="${base_name}.dat"
-    clname="${base_name}_${support}_${min_length}_${time_level}_${space_level}.cl"
-    finame="${base_name}_${support}_${time_level}_${space_level}.fi"
-    empname="${base_name}_${time_level}_${space_level}.emp"
-    grpname="${base_name}_wc2_${wc_threshold}_${support}_${min_length}_${time_level}_${space_level}.grp"
-    stats="tmp/${base_name}_wc2_${wc_threshold}_${support}_${min_length}_${time_level}_${space_level}.stats"
-    if test -s "tmp/${clname}" ; then
-        echo "wc2: ${grpname}"
-        runtime=`get_time ${BIN_PATH}/wc2 -t ${wc_threshold} -f tmp/${finame} -e tmp/${empname} ${datname} tmp/${clname} tmp/${grpname}`
-        echo "WC2 Runtime: ${runtime}" > ${stats}
-        ngrp=`wc -l tmp/${grpname} | awk '{print $1}'`
+    empname="${target_dir}/${base_name}/map/${time_level}_${space_level}.emp"
+    finame="${target_dir}/${base_name}/fim/${support}/${time_level}_${space_level}.fi"
+    clname="${target_dir}/${base_name}/cliques/${support}/${min_length}/${time_level}_${space_level}.cl"
+    grpname="${path}/${time_level}_${space_level}.grp"
+    stats="${path}/${time_level}_${space_level}.stats"
+    if test -s "${clname}" ; then
+        mkdir -p ${path}
+        echo "${algorithm}: ${grpname}"
+        if test "${algorithm}" == "cc" ; then
+            runtime=`get_time ${BIN_PATH}/${algorithm} ${datname} ${clname} ${grpname}`
+        elif test "${algorithm}" == "nc" ; then 
+            runtime=`get_time ${BIN_PATH}/${algorithm} -t ${weight} ${datname} ${clname} ${grpname}`
+        elif test "${algorithm}" == "nc2" ; then 
+            runtime=`get_time ${BIN_PATH}/${algorithm} -t ${weight} -f ${finame} ${datname} ${clname} ${grpname}`
+        elif test "${algorithm}" == "wc" -o "${algorithm}" == "wc2" ; then 
+            runtime=`get_time ${BIN_PATH}/${algorithm} -t ${weight} -f ${finame} -e ${empname} ${datname} ${clname} ${grpname}`
+        fi
+        echo "${algorithm} Runtime: ${runtime}" > ${stats}
+        ngrp=`wc -l ${grpname} | awk '{print $1}'`
         echo "Groups found: ${ngrp}" >> ${stats}
     fi
 }
