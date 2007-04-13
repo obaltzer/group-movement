@@ -2,9 +2,9 @@
 
 . ../functions.sh
 
-empfile=`chop_ext $1`
-base_name=`echo ${empfile} | cut -d"_" -f1`
-time_level=`echo ${empfile} | cut -d"_" -f2`
-space_level=`echo ${empfile} | cut -d"_" -f3`
+data_src=$1
+target_dir=$2
+space_level=$3
+time_level=$4
 
 map

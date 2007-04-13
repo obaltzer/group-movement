@@ -121,8 +121,8 @@ function run_wc()
 
 function map()
 {
-    echo ${BIN_PATH}/levels ${base_name}.dat
-    levels=`${BIN_PATH}/levels ${base_name}.dat`
+    get_data
+    levels=`${BIN_PATH}/levels ${datname}`
     lx=`echo ${levels} | cut -d" " -f1`
     ly=`echo ${levels} | cut -d" " -f2`
     lt=`echo ${levels} | cut -d" " -f3`
@@ -131,32 +131,37 @@ function map()
         l=`expr ${lx} - ${space_level}`
         t=`expr ${lt} - ${time_level}`
         filename="${time_level}_${space_level}"
-        path="${target_dir}/${base_name}/map"
+        path="${target_dir}/map"
         mkdir -p ${path}
         stats="${path}/${filename}.stats"
-        echo "map: ${filename}.emp"
-        # write map file
-        runtime=`get_time ${BIN_PATH}/map -l ${l},${l},${t} -o ${path}/${filename}.map ${base_name}.dat`
-        echo "MAP Runtime: ${runtime}" > ${stats}
-        # enumerate samples
-        runtime=`get_time ${BIN_PATH}/enumerate -u ${path}/${filename}.unq -o ${path}/${filename}.emp ${path}/${filename}.map`
-        echo "EMAP Runtime: ${runtime}" >> ${stats}
-        trajectories=`wc -l ${path}/${filename}.emp | awk '{print $1}'`
-        echo "Trajectories: ${trajectories}" >> ${stats}
-        unique=`wc -l ${path}/${filename}.unq | awk '{print $1}'`
-        echo "Unique Items: ${unique}" >> ${stats}
+        if test ! -e ${path}/${filename}.map ; then
+            # echo "map: ${filename}.emp"
+            # write map file
+            runtime=`get_time ${BIN_PATH}/map -l ${l},${l},${t} -o ${path}/${filename}.map ${datname}`
+            echo "MAP Runtime: ${runtime}" > ${stats}
+            # enumerate samples
+            runtime=`get_time ${BIN_PATH}/enumerate -u ${path}/${filename}.unq -o ${path}/${filename}.emp ${path}/${filename}.map`
+            echo "EMAP Runtime: ${runtime}" >> ${stats}
+            trajectories=`wc -l ${path}/${filename}.emp | awk '{print $1}'`
+            echo "Trajectories: ${trajectories}" >> ${stats}
+            unique=`wc -l ${path}/${filename}.unq | awk '{print $1}'`
+            echo "Unique Items: ${unique}" >> ${stats}
+        fi
     fi
 }
         
 function fim()
 {
-    path="${target_dir}/${base_name}/fim/${support}"
+    empname="${target_dir}/map/${time_level}_${space_level}.emp"
+    if test ! -e ${empname} ; then
+        map
+    fi
+    path="${target_dir}/fim/${support}"
     mkdir -p ${path}
-    empname="${target_dir}/${base_name}/map/${time_level}_${space_level}.emp"
     finame="${path}/${time_level}_${space_level}.fi"
     stats="${path}/${time_level}_${space_level}.stats"
     if test -s "${empname}" ; then
-        echo "fim: ${finame}"
+        # echo "fim: ${finame}"
         # run frequent itemset mining
         runtime=`get_time ${FIM_APP} ${empname} ${support} ${finame}.tmp`
         mv ${finame}.tmp ${finame}
@@ -168,14 +173,17 @@ function fim()
 
 function match()
 {
-    path="${target_dir}/${base_name}/cliques/${support}/${min_length}"
+    empname="${target_dir}/map/${time_level}_${space_level}.emp"
+    finame="${target_dir}/fim/${support}/${time_level}_${space_level}.fi"
+    if test ! -e ${finame} ; then
+        fim
+    fi
+    path="${target_dir}/cliques/${support}/${min_length}"
     mkdir -p ${path}
-    empname="${target_dir}/${base_name}/map/${time_level}_${space_level}.emp"
-    finame="${target_dir}/${base_name}/fim/${support}/${time_level}_${space_level}.fi"
     clname="${path}/${time_level}_${space_level}.cl"
     stats="${path}/${time_level}_${space_level}.stats"
     if test -s "${finame}" ; then
-        echo "match: ${clname}"
+        # echo "match: ${clname}"
         # match frequent items with trajectories (generate cliques)
         runtime=`get_time ${BIN_PATH}/match -l ${min_length} ${finame} ${empname} ${clname}`
         echo "MATCH Runtime: ${runtime}" > ${stats}
@@ -186,20 +194,23 @@ function match()
 
 function group()
 {
-    if test "${algorithm}" != "cc" ; then
-        path="${target_dir}/${base_name}/${algorithm}/${weight}/${support}/${min_length}"
-    else
-        path="${target_dir}/${base_name}/${algorithm}/0.0/${support}/${min_length}"
+    get_data
+    empname="${target_dir}/map/${time_level}_${space_level}.emp"
+    finame="${target_dir}/fim/${support}/${time_level}_${space_level}.fi"
+    clname="${target_dir}/cliques/${support}/${min_length}/${time_level}_${space_level}.cl"
+    if test ! -e ${clname} ; then
+        match
     fi
-    datname="${base_name}.dat"
-    empname="${target_dir}/${base_name}/map/${time_level}_${space_level}.emp"
-    finame="${target_dir}/${base_name}/fim/${support}/${time_level}_${space_level}.fi"
-    clname="${target_dir}/${base_name}/cliques/${support}/${min_length}/${time_level}_${space_level}.cl"
+    if test "${algorithm}" != "cc" ; then
+        path="${target_dir}/${algorithm}/${weight}/${support}/${min_length}"
+    else
+        path="${target_dir}/${algorithm}/0.0/${support}/${min_length}"
+    fi
     grpname="${path}/${time_level}_${space_level}.grp"
     stats="${path}/${time_level}_${space_level}.stats"
     if test -s "${clname}" ; then
         mkdir -p ${path}
-        echo "${algorithm}: ${grpname}"
+        # echo "${algorithm}: ${grpname}"
         if test "${algorithm}" == "cc" ; then
             runtime=`get_time ${BIN_PATH}/${algorithm} ${datname} ${clname} ${grpname}`
         elif test "${algorithm}" == "nc" ; then 
@@ -212,6 +223,20 @@ function group()
         echo "${algorithm} Runtime: ${runtime}" > ${stats}
         ngrp=`wc -l ${grpname} | awk '{print $1}'`
         echo "Groups found: ${ngrp}" >> ${stats}
+    fi
+}
+
+function get_data
+{
+    mkdir -p ${target_dir}
+    datname="${target_dir}/data.dat"
+    if test ! -e ${datname} ; then
+        if test ! -e ${data_src} ; then 
+            echo "Cannot find source data."
+            exit -1
+        else
+            cp ${data_src} ${datname}
+        fi
     fi
 }
 
