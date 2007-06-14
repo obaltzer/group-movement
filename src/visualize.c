@@ -28,6 +28,8 @@ double colors[] = {
     0.0, 0.25, 0.25  /* dark cyan   */
 };
 
+double gray[] = { 0.8, 0.8, 0.8 /* dark grey */ };
+
 struct visualize_config_s
 {
     int width;
@@ -40,12 +42,14 @@ struct visualize_config_s
     int split;
     double line_width;
     int print;
+    int overlay_groups;
 };
 typedef struct visualize_config_s visualize_config_t;
 
 void usage();
 int configure(visualize_config_t* config, int argc, char** argv);
 void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* groups);
+void dataset_draw( visualize_config_t* config, dataset_t* dataset, group_list_t* groups, cairo_t* cr );
 
 int main(int argc, char** argv)
 {
@@ -61,7 +65,7 @@ int main(int argc, char** argv)
     if(dataset)
     {
         if(config.have_groups)
-            groups = group_list_load(config.grpfile); 
+            groups = group_list_load(config.grpfile);
         
         if(config.print)
             dataset_print(dataset);
@@ -89,7 +93,8 @@ int configure(visualize_config_t* config, int argc, char** argv)
         {"split-groups",    no_argument,        NULL,   'G'},
         {"highlight",       no_argument,        NULL,   'l'},
         {"print",           no_argument,        NULL,   'p'},
-        {"line-width",       required_argument,        NULL,   't'},
+        {"line-width",         required_argument,    NULL,   't'},
+        {"overlay",            no_argument,    NULL,    'O'},
         {NULL,      0,                  NULL,   0 }
     };
     
@@ -102,8 +107,9 @@ int configure(visualize_config_t* config, int argc, char** argv)
     config->line_width = 0.5;
     config->split = FALSE;
     config->output[0] = '\0';
+    config->overlay_groups = FALSE;
     
-    while((ch = getopt_long(argc, argv, "Gg:w:h:o:g:lpt:", longopts, NULL)) != -1)
+    while((ch = getopt_long(argc, argv, "Gg:w:h:o:g:lpt:O", longopts, NULL)) != -1)
     {
         switch(ch)
         {
@@ -132,6 +138,9 @@ int configure(visualize_config_t* config, int argc, char** argv)
                 break;
             case 'p':
                 config->print = TRUE;
+                break;
+            case 'O':
+                config->overlay_groups = TRUE;
                 break;
             default:
                 usage();
@@ -189,7 +198,8 @@ void usage()
         " -o, --output FILE\tfilename of the output PNG file (default: output.png)\n"\
         " -g, --groups FILE\tfilename of the groups definition file (default: none)\n"\
         " -G, --split-groups\tCreate an individual image for each group (default: off)\n"\
-        " -t, --line-width\twidth of the lines to draw (default: 0.5)\n");
+        " -t, --line-width\twidth of the lines to draw (default: 0.5)\n"
+        " -O, --overlay\t\toverlay output PNG on reference image (default: off)\n");
     exit(-1);
 }
 
@@ -242,10 +252,16 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
         cairo_rectangle(cr, 0, 0, (double)config->width, (double)config->height);
         cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
         cairo_fill(cr);
+        //insert draw (green)
     }
+    
+    //cut
+    dataset_draw_help( config, dataset, groups, cr );
+        
     
     if(n_groups > 0)
     {
+        
         for(g = 0; g < n_groups; g++)
         {
             if(config->split)
@@ -253,19 +269,21 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
                 cairo_rectangle(cr, 0, 0, (double)config->width, (double)config->height);
                 cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
                 cairo_fill(cr);
+                dataset_draw_help( config, dataset, groups, cr );    // inserted ~~ wih fray
             }
+                    
             
             for(t = 0; t < gl[g].n_trajectories; t++)
-            {
+            {    
                 trajectory_t* tr =
                     &dataset->trajectories[gl[g].trajectories[t]];
                 cairo_move_to(cr, (double)tr->samples[0].x * scale_x, 
-                              (double)tr->samples[0].y * scale_y);
+                                                            config->height - ((double)tr->samples[0].y * scale_y));
                 for(s = 1; s < tr->n_samples; s++)
                     cairo_line_to(
                         cr, 
                         (double)tr->samples[s].x * scale_x,
-                        (double)tr->samples[s].y * scale_y
+                        config->height - ((double)tr->samples[s].y * scale_y)
                     );
             }
             if(config->highlight && gl[g].n_trajectories != 1)
@@ -284,23 +302,7 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
             }
         }
     }
-    else
-    {
-        cairo_set_source_rgb(cr, 0.0, 0.7, 0.0);
-        for(t = 0; t < dataset->n_trajectories; t++)
-        {
-            trajectory_t* tr = &dataset->trajectories[t];
-            cairo_move_to(cr, (double)tr->samples[0].x * scale_x, 
-                          (double)tr->samples[0].y * scale_y);
-            for(s = 1; s < tr->n_samples; s++)
-                cairo_line_to(
-                    cr, 
-                    (double)tr->samples[s].x * scale_x,
-                    (double)tr->samples[s].y * scale_y
-                );
-        }
-        cairo_stroke(cr);
-    }
+
 
     if(!config->split || n_groups == 0)
         cairo_surface_write_to_png(surface, config->output);
@@ -309,3 +311,49 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
     cairo_surface_destroy(surface);
     free(imgbuf);
 }
+
+void dataset_draw_help( visualize_config_t* config, dataset_t* dataset, group_list_t* groups, cairo_t* cr )
+{
+    int n_groups = dataset->n_groups;
+    group_t* gl = dataset->groups;
+    int t = 0;
+    int s = 0;
+    double scale_x = (double)config->width / (double)dataset->grid_size;
+    double scale_y = (double)config->height / (double)dataset->grid_size;
+    
+    n_groups = dataset->n_groups;
+    gl = dataset->groups;
+    
+    if(groups && (groups->n_groups > 0))
+    {
+        n_groups = groups->n_groups;
+        gl = groups->groups;
+    }
+    
+    
+    if(!n_groups || config->overlay_groups)
+    {
+        if(!n_groups) {
+            cairo_set_source_rgb(cr, 0.0, 0.7, 0.0);
+        }
+        else {         
+            cairo_set_source_rgb(cr, gray[0], gray[1], gray[2]);
+        }
+        
+        for(t = 0; t < dataset->n_trajectories; t++)
+        {
+            trajectory_t* tr = &dataset->trajectories[t];
+            cairo_move_to(cr, (double)tr->samples[0].x * scale_x, 
+                                        config->height - ((double)tr->samples[0].y * scale_y));
+            for(s = 1; s < tr->n_samples; s++)
+                cairo_line_to(
+                                cr, 
+                                (double)tr->samples[s].x * scale_x,
+                                config->height - ((double)tr->samples[s].y * scale_y)
+                                );
+        }
+        cairo_stroke(cr);
+    }
+}
+
+
