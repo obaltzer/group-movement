@@ -32,24 +32,57 @@ double gray[] = { 0.8, 0.8, 0.8 /* dark grey */ };
 
 struct visualize_config_s
 {
+    /* Variable: width
+     * Width of the output image in pixel. */
     int width;
+    
+    /* Variable: height
+     * Height of the output image in pixel. */
     int height;
+    
+    /* Variable: output
+     * Buffer for the output image's filename or a filename pattern in case we write multiple images. */
     char output[256];
+    
+    /* Variable: input
+     * Buffer for the dataset file's name. */
     char input[256];
+
+    /* Variable: grpfile
+     * Buffer for the group file's name. */
     char grpfile[256];
+
+    /* Variable: have_groups
+     * Flag whether a groups file was specified. */
     int have_groups;
+
+    /* Variable: highlight
+     * Flag whether to highlight groups with different colors. */
     int highlight;
+
+    /* Variable: split
+     * Flag whether to write each group into a separate file. */
     int split;
+
+    /* Variable: line_width
+     * Width used to draw a trajectory's line. */
     double line_width;
+
+    /* Variable: print
+     * Flag whether to print the dataset to stdout for debugging. */
     int print;
+
+    /* Variable: overlay_groups
+     * Flag whether to draw the reference dataset underneath the groups. */
     int overlay_groups;
 };
 typedef struct visualize_config_s visualize_config_t;
 
+/* Forward declarations. */
 void usage();
 int configure(visualize_config_t* config, int argc, char** argv);
 void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* groups);
-void dataset_draw( visualize_config_t* config, dataset_t* dataset, group_list_t* groups, cairo_t* cr );
+void dataset_draw_help(visualize_config_t* config, dataset_t* dataset, group_list_t* groups, cairo_t* cr);
 
 int main(int argc, char** argv)
 {
@@ -61,18 +94,27 @@ int main(int argc, char** argv)
 
     configure(&config, argc, argv);   
     
+    /* load dataset from input file */
     dataset = dataset_load(config.input);
     if(dataset)
     {
+        /* if a group list is defined, load that one too */
         if(config.have_groups)
             groups = group_list_load(config.grpfile);
         
+        /* if the dataset is supposed to be printed to stdout in text format,
+         * then do so */
         if(config.print)
             dataset_print(dataset);
+        
+        /* now draw the dataset */
         dataset_draw(&config, dataset, groups);
         
+        /* release group list from memory if there is one */
         if(groups)
             group_list_destroy(groups);
+
+        /* release dataset from memory */
         dataset_destroy(&dataset);
 
     }
@@ -203,6 +245,22 @@ void usage()
     exit(-1);
 }
 
+/**
+ * Function: dataset_draw
+ *
+ * Draws the dataset's trajectories into a PNG image highlighting different
+ * groups with different colors.
+ *
+ * Parameters:
+ * 
+ *   config  - pointer to a <visualize_config_t> structure containing
+ *             information about the size of the image to generate and to what
+ *             file it should be saved to
+ *
+ *   dataset - pointer to a dataset
+ *
+ *   groups  - pointer to a groups list
+ */
 void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* groups)
 {
     unsigned char* imgbuf;
@@ -218,12 +276,14 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
     double* c;
     char filename_buf[256];
 
+    /* allocate memory for image buffer -- the area Cairo will draw in */
     if((imgbuf = malloc(sizeof(unsigned char) * config->width * config->height * 4)) == NULL)
     {
         printf("Cannot allocate memory for image buffer.\n");
         return;
     }
 
+    /* create a drawing surface */
     surface = cairo_image_surface_create_for_data(
         imgbuf,
         CAIRO_FORMAT_ARGB32,
@@ -232,38 +292,50 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
         config->width * 4
     );
 
+    /* create a cairo context on the surface */
     cr = cairo_create(surface);
         
+    /* compute the scaling factor based on the size of the dataset grid and the
+     * size of the image */
     scale_x = (double)config->width / (double)dataset->grid_size;
     scale_y = (double)config->height / (double)dataset->grid_size;
+    
+    /* set the line width */
     cairo_set_line_width(cr, config->line_width);
 
+    /* a dataset can define its own groups, use those as default if there are
+     * any */
     n_groups = dataset->n_groups;
     gl = dataset->groups;
     
+    /* if there is an explicitly defined set of groups, use those instead */ 
     if(groups && (groups->n_groups > 0))
     {
         n_groups = groups->n_groups;
         gl = groups->groups;
     }
     
+    /* if there are no groups defined or we only draw one image, fill the
+     * surface with white background */
     if(!config->split || n_groups == 0)
     {
         cairo_rectangle(cr, 0, 0, (double)config->width, (double)config->height);
         cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
         cairo_fill(cr);
-        //insert draw (green)
     }
     
-    //cut
+    /* FIXME: don't know what happens here, I think this draws the entire
+     * dataset */
     dataset_draw_help( config, dataset, groups, cr );
-        
     
+    /* If there are groups defined draw each group individually. */
     if(n_groups > 0)
     {
-        
+        /* for each group */
         for(g = 0; g < n_groups; g++)
         {
+            /* If we split up the group into individual images, we need to
+             * clear the current surface with a white background. */
             if(config->split)
             {
                 cairo_rectangle(cr, 0, 0, (double)config->width, (double)config->height);
@@ -272,13 +344,20 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
                 dataset_draw_help( config, dataset, groups, cr );    // inserted ~~ wih fray
             }
                     
-            
+            /* for each trajectory in the group */
             for(t = 0; t < gl[g].n_trajectories; t++)
             {    
                 trajectory_t* tr =
                     &dataset->trajectories[gl[g].trajectories[t]];
-                cairo_move_to(cr, (double)tr->samples[0].x * scale_x, 
-                                                            config->height - ((double)tr->samples[0].y * scale_y));
+                /* move to the beginning of the trajectory */
+                cairo_move_to(
+                    cr, 
+                    (double)tr->samples[0].x * scale_x, 
+                    config->height - ((double)tr->samples[0].y * scale_y)
+                );
+                
+                /* now draw a polyline by iterating through each of the
+                 * trajectory's samples */
                 for(s = 1; s < tr->n_samples; s++)
                     cairo_line_to(
                         cr, 
@@ -286,15 +365,26 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
                         config->height - ((double)tr->samples[s].y * scale_y)
                     );
             }
+
+            /* If groups should have a different color than the other
+             * (non-grouped) trajectories (config->highlight) and the current
+             * group is in fact a group of more than one trajectories, then pick a
+             * different color. */
             if(config->highlight && gl[g].n_trajectories != 1)
             {   
+                fprintf(stderr, "Size of colors: %d\n", (g % (sizeof(colors) / 24)) * 3);
                 c = &colors[(g % (sizeof(colors) / 24)) * 3];   
                 cairo_set_source_rgb(cr, c[0], c[1], c[2]);
             }
             else
+                /* otherwise draw everything greenish */
                 cairo_set_source_rgb(cr, 0.0, 0.7, 0.0);
+
+            /* finally draw all of the group */
             cairo_stroke(cr);
 
+            /* If we split groups in separate images, construct a filename and
+             * write the image for the current group. */
             if(config->split)
             {
                 snprintf(filename_buf, sizeof(filename_buf), config->output, g);
@@ -303,10 +393,12 @@ void dataset_draw(visualize_config_t* config, dataset_t* dataset, group_list_t* 
         }
     }
 
-
+    /* If the groups were not split into separate images, then write only a
+     * single image. */
     if(!config->split || n_groups == 0)
         cairo_surface_write_to_png(surface, config->output);
     
+    /* free up all that memory */
     cairo_destroy(cr);
     cairo_surface_destroy(surface);
     free(imgbuf);
