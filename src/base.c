@@ -576,18 +576,6 @@ int trajectory_read(trajectory_t* t, int fd)
     return TRUE;
 }
 
-int samples_write(sample_t* s, int fd)
-{
-    /* write(fd, s, sizeof(sample_t)); */
-    return TRUE;
-}
-
-int sample_read(sample_t* s, int fd)
-{
-    /* read(fd, s, sizeof(sample_t)); */
-    return TRUE;
-}
-
 void sample_map(sample_t* in, sample_t* out, map_level_t* level)
 {
     out->x = (in->x >> level->x) << level->x;
