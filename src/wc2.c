@@ -107,7 +107,7 @@ void alignment_amount(clique_t* c, int t1, int t2, void* weight, void* user_data
     int len_t2 = data->emap->trajectories[c->trajectories[t2]].n_sample_ids;
     double w = (double)(len_fi * 2) / (double)(len_t1 + len_t2);
 
-    if(w >= data->threshold && (*(double*)weight) < w)
+    if(w > data->threshold && (*(double*)weight) < w)
         (*(double*)weight) = w;
     /*
     clique_print(c);
@@ -137,7 +137,7 @@ double thresholded_boolean_strength(group_list_t* groups, int g1, int g2, void* 
         for(j = 0; j < groups->groups[g2].n_trajectories; j++)
         {
             w = data->matrix->matrix + (data->matrix->weight_size * ((data->matrix->n_trajectories * groups->groups[g2].trajectories[j]) + groups->groups[g1].trajectories[i]));
-            if(*w >= data->threshold)
+            if(*w > data->threshold)
                 return 1.0;
         }
 
@@ -242,6 +242,29 @@ group_list_t* group_list_from_matrix(matrix_t* matrix)
             done = TRUE;
     }
     while(!done);
+    
+    /* Remove singletons from list. */
+    new_list = NULL;
+    j = 0;
+    for(i = 0; i < groups->n_groups; i++)
+    {
+        if(groups->groups[i].n_trajectories > 1)
+        {
+            if((new_list = realloc(new_list, sizeof(group_t) * ++j)) != NULL)
+            {
+                new_list[j - 1].n_trajectories = groups->groups[i].n_trajectories;
+                new_list[j - 1].group_id = groups->groups[i].group_id;
+                new_list[j - 1].trajectories = groups->groups[i].trajectories;
+            }
+        }
+        else
+        {
+            free(groups->groups[i].trajectories);
+        }
+    }
+    free(groups->groups);
+    groups->groups = new_list;
+    groups->n_groups = j;
     return groups;
 }
 
@@ -294,7 +317,7 @@ int main(int argc, char** argv)
     wc_data.threshold = config.threshold;
     printf("Generate matrix...\n");
     matrix = matrix_create(data, cl, sizeof(double), &wc_data, alignment_amount);
-    matrix_print_double(matrix);
+/*    matrix_print_double(matrix); */
     printf("Merging groups...\n");
     wc_data.matrix = matrix;
     groups = group_list_from_matrix(matrix);
