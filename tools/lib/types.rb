@@ -450,6 +450,99 @@ class Spiral < Path
     end
 end
 
+class Queue < Array
+  def initialize(n)
+    @n = n
+  end
+
+  def push(o)
+    super(o)
+    while size > @n
+      shift
+    end
+    self
+  end
+end
+
+class NestedSpiral < Path
+  @@chunk = -1
+  @@centre_x = 0
+  @@centre_y = 0
+  @@radius_base = 0
+  @@last_i = 0
+  @@q = nil
+  def initialize(top_x, top_y, bottom_x, bottom_y, samples, max_speed, stop)
+    super()
+    @chunks = GCConfig.nested_spiral_chunks
+    @top_x, @top_y, @bottom_x, @bottom_y = top_x, top_y, bottom_x, bottom_y
+    if @@chunk == -1 or @@chunk == @chunks
+      @@centre_x = @top_x + (@bottom_x - @top_x) / 2 + rand(GCConfig.spiral_max_distance * 2) - GCConfig.spiral_max_distance
+      @@centre_y = @top_y + (@bottom_y - @top_y) / 2 + rand(GCConfig.spiral_max_distance * 2) - GCConfig.spiral_max_distance
+      @@radius_base = GCConfig.spiral_radius_base[0] + (GCConfig.spiral_radius_base[1] - GCConfig.spiral_radius_base[0]) * rand
+      @@chunk = 0
+      @@q = Queue.new(GCConfig.nested_spiral_overlap)
+      @@q.push(0)
+    else
+      @@chunk = @@chunk + 1
+    end
+    @centre_x = @@centre_x
+    @centre_y = @@centre_y
+    @radius_base = @@radius_base
+    @stop = stop
+    @max_speed = max_speed
+    @samples = samples
+    @offset = samples * @@chunk
+    puts "Offset is: #{@offset}"
+    push(Position.new(init_position))
+    generate
+  end
+
+  private
+    def init_position
+      step_size = PI2 / 3600.0
+      if @offset == 0
+        [@centre_x, @centre_y, 0]
+      else
+        x = (Math.cos(step_size * @@q.first) * radius(@@q.first)).ceil
+        y = (Math.sin(step_size * @@q.first) * radius(@@q.first)).ceil
+        [@centre_x + x, @centre_y + y, @offset]
+      end
+    end
+    
+    def generate
+      # step size is a 10th of a degree
+      step_size = PI2 / 3600.0
+      i = @@q.first
+      puts "i is: #{i}"
+      puts "Last point: #{last.inspect}"
+      (@offset..(@offset + @samples - 1)).each do |t|
+        p = last
+        if rand < @stop
+          push(Position.new([p.x, p.y, t]))
+          p = last
+        else
+          s = speed
+          @@q.push(i)
+          while last.distance(p) < s
+            x = (Math.cos(step_size * i) * radius(i)).ceil
+            y = (Math.sin(step_size * i) * radius(i)).ceil
+            i = i.next
+            p = Position.new([@centre_x + x, @centre_y + y, t])
+          end
+          push(p)
+        end
+      end
+    end
+
+    def radius(i)
+      return (@radius_base ** i)
+    end
+
+    def speed
+      rand() * @max_speed
+    end
+end
+
 class Parabola < Path
   @@instances = 0
 

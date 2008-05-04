@@ -188,7 +188,7 @@ int main(int argc, char** argv)
     frequent_itemset_list_t* fi;
 
 #ifdef WITH_LIMITS
-    struct rlimit cpu_limit = { 900, 900 };
+    struct rlimit cpu_limit = { 120, 120 };
     struct rlimit mem_limit = { 419430400, 419430400};
 
     setrlimit(RLIMIT_CPU, &cpu_limit  );

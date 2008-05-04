@@ -2,7 +2,7 @@
 
 #$ -N trucks_all
 #$ -pe lam 24
-#$ -l h_rt=144:00:00
+#$ -l h_rt=200:00:00
 #$ -V
 ##$ -j yes
 #$ -S /bin/bash

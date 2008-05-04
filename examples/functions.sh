@@ -1,6 +1,6 @@
 TOOLS_PATH=../../tools
 BIN_PATH=../../bin
-FIM_APP=${BIN_PATH}/fim_max_rlimit
+FIM_APP=${BIN_PATH}/fim_closed_rlimit
 TIME=/usr/bin/time
 
 function reference_image()
@@ -219,6 +219,10 @@ function group()
             runtime=`get_time ${BIN_PATH}/${algorithm} -t ${weight} -f ${finame} ${datname} ${clname} ${grpname}`
         elif test "${algorithm}" == "wc" -o "${algorithm}" == "wc2" ; then 
             runtime=`get_time ${BIN_PATH}/${algorithm} -t ${weight} -f ${finame} -e ${empname} ${datname} ${clname} ${grpname}`
+        elif test "${algorithm}" == "both" ; then 
+            ast=${weight}
+            ost=${weight}
+            runtime=`get_time ${BIN_PATH}/${algorithm} -a ${ast} -o ${ost} -f ${finame} -e ${empname} ${datname} ${clname} ${grpname}`
         fi
         echo "${algorithm} Runtime: ${runtime}" > ${stats}
         ngrp=`wc -l ${grpname} | awk '{print $1}'`

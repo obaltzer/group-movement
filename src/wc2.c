@@ -303,7 +303,7 @@ int main(int argc, char** argv)
     group_list_t* groups;
     wc_data_t wc_data;
 #ifdef WITH_LIMITS
-    struct rlimit cpu_limit = { 900, 900 };
+    struct rlimit cpu_limit = { 120, 120 };
     struct rlimit mem_limit = { 419430400, 419430400};
 
     setrlimit(RLIMIT_CPU, &cpu_limit  );

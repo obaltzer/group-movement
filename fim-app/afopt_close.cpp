@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
-
+#include <sys/resource.h>
 
 #include "Global.h"
 #include "ScanDBMine.h"
@@ -35,6 +35,10 @@ int OutputCommonPrefix(int* pitem_sups, int length, int *bitmap, int nroot_sup);
 
 int main(int argc, char *argv[])
 {
+        struct rlimit cpu_limit = { 600, 600 };
+        struct rlimit mem_limit = { 268435456, 268435456};
+        setrlimit(RLIMIT_CPU, &cpu_limit  );
+        setrlimit(RLIMIT_AS, &mem_limit  );
 
 	if(argc==4)
 		goparameters.bresult_name_given = true;
